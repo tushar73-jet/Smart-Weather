@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, ActivityIndicator, ScrollView, SafeAreaView, TextInput, TouchableOpacity, Keyboard, Alert } from 'react-native';
+import { StyleSheet, Text, View, ActivityIndicator, ScrollView, SafeAreaView, TextInput, TouchableOpacity, Keyboard, Alert, Platform } from 'react-native';
 import * as Location from 'expo-location';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -112,11 +112,11 @@ export default function App() {
     );
   }
 
-  return (
-    <SafeAreaView style={styles.container}>
+return (
+  <SafeAreaView style={styles.root}>
+    <View style={styles.phoneWrapper}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         
-        {/* Search Bar */}
         <View style={styles.searchWrapper}>
           <View style={styles.searchContainer}>
             <MaterialIcons name="search" size={24} color="#666" style={{marginRight: 5}}/>
@@ -145,21 +145,39 @@ export default function App() {
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
-  );
+    </View>
+  </SafeAreaView>
+);
+
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5', paddingTop: 10 },
-  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  scrollContainer: { alignItems: 'center', padding: 20, paddingBottom: 50 },
-  
+  root: { 
+    flex: 1, 
+    backgroundColor: '#f5f5f5',
+  },
+
+  phoneWrapper: {
+    width: Platform.OS === "web" ? 430 : "100%", // Look like iPhone 14 Pro
+    maxWidth: 430,
+    alignSelf: "center",
+    backgroundColor: "#f5f5f5",
+    flex: 1,
+  },
+
+  scrollContainer: { 
+    alignItems: 'center', 
+    padding: 20, 
+    paddingBottom: 50 
+  },
+
   searchWrapper: {
     flexDirection: 'row',
     width: '100%',
     marginBottom: 25,
     alignItems: 'center',
   },
+
   searchContainer: {
     flex: 1,
     flexDirection: 'row',
@@ -173,11 +191,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     elevation: 2,
   },
+
   input: {
     flex: 1,
     fontSize: 16,
     color: '#333',
   },
+
   button: {
     backgroundColor: '#007AFF',
     padding: 12,
@@ -190,14 +210,7 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 5,
   },
-  errorContainer: {
-    alignItems: 'center',
-    marginTop: 50,
-  },
-  errorText: {
-    color: '#333',
-    fontSize: 18,
-    marginTop: 10,
-    fontWeight: '500',
-  },
+
+  errorContainer: { alignItems: 'center', marginTop: 50 },
+  errorText: { color: '#333', fontSize: 18, marginTop: 10, fontWeight: '500' },
 });

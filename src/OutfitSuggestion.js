@@ -26,13 +26,13 @@ export default function OutfitSuggestion({ temp, weatherId }) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'rgba(0,0,0,0.05)', 
+    backgroundColor: '#F0F8FF', 
     borderRadius: 15,
     padding: 15,
     marginVertical: 15,
     flexDirection: 'row',
     alignItems: 'center',
-    width: '90%',
+    width: '100%',
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.05)',
   },
