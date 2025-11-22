@@ -1,20 +1,203 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, ActivityIndicator, ScrollView, SafeAreaView, TextInput, TouchableOpacity, Keyboard, Alert } from 'react-native';
+import * as Location from 'expo-location';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MaterialIcons } from '@expo/vector-icons'; 
+
+import WeatherCard from './src/WeatherCard';
+import ForecastList from './src/ForecastList'; 
+
+const API_KEY = '3a307f3ced9dd6c1425c723508bdc58c'; 
 
 export default function App() {
+  const [weather, setWeather] = useState(null);
+  const [forecast, setForecast] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState(null);
+  const [citySearch, setCitySearch] = useState('');
+
+  useEffect(() => {
+    loadCachedData(); 
+    getCurrentLocationWeather(); 
+  }, []);
+
+  const loadCachedData = async () => {
+    try {
+      const savedWeather = await AsyncStorage.getItem('lastWeather');
+      const savedForecast = await AsyncStorage.getItem('lastForecast');
+      
+      if (savedWeather && savedForecast) {
+        setWeather(JSON.parse(savedWeather));
+        setForecast(JSON.parse(savedForecast));
+        setLoading(false); 
+      }
+    } catch (e) {
+      console.log("Failed to load cache");
+    }
+  };
+
+  const getCurrentLocationWeather = async () => {
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      setErrorMsg('Permission to access location was denied');
+      setLoading(false);
+      return;
+    }
+
+    let location = await Location.getCurrentPositionAsync({});
+    fetchData(location.coords.latitude, location.coords.longitude);
+  };
+
+  const fetchData = async (lat, lon) => {
+    try {
+      const [weatherRes, forecastRes] = await Promise.all([
+        axios.get(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`),
+        axios.get(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`)
+      ]);
+      
+      setWeather(weatherRes.data);
+      setForecast(forecastRes.data);
+      setErrorMsg(null);
+
+      await AsyncStorage.setItem('lastWeather', JSON.stringify(weatherRes.data));
+      await AsyncStorage.setItem('lastForecast', JSON.stringify(forecastRes.data));
+
+    } catch (err) {
+      const savedWeather = await AsyncStorage.getItem('lastWeather');
+      if (savedWeather) {
+        Alert.alert("Offline Mode", "Showing last updated data. Check internet connection.");
+      } else {
+        setErrorMsg('No Internet & No Saved Data.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const searchCity = async () => {
+    if (!citySearch.trim()) return;
+    Keyboard.dismiss();
+    setLoading(true);
+    try {
+      const weatherRes = await axios.get(
+        `https://api.openweathermap.org/data/2.5/weather?q=${citySearch}&units=metric&appid=${API_KEY}`
+      );
+      const { lat, lon } = weatherRes.data.coord;
+      
+      const forecastRes = await axios.get(
+        `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`
+      );
+
+      setWeather(weatherRes.data);
+      setForecast(forecastRes.data);
+      setErrorMsg(null);
+      setCitySearch('');
+      
+      await AsyncStorage.setItem('lastWeather', JSON.stringify(weatherRes.data));
+      await AsyncStorage.setItem('lastForecast', JSON.stringify(forecastRes.data));
+
+    } catch (err) {
+      setErrorMsg('City not found or Network Error.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        
+        {/* Search Bar */}
+        <View style={styles.searchWrapper}>
+          <View style={styles.searchContainer}>
+            <MaterialIcons name="search" size={24} color="#666" style={{marginRight: 5}}/>
+            <TextInput 
+              style={styles.input}
+              placeholder="Search City..."
+              value={citySearch}
+              onChangeText={setCitySearch}
+              onSubmitEditing={searchCity}
+            />
+          </View>
+          <TouchableOpacity style={styles.button} onPress={searchCity}>
+            <MaterialIcons name="arrow-forward" size={24} color="white" />
+          </TouchableOpacity>
+        </View>
+
+        {errorMsg ? (
+          <View style={styles.errorContainer}>
+             <MaterialIcons name="error-outline" size={40} color="red" />
+             <Text style={styles.errorText}>{errorMsg}</Text>
+          </View>
+        ) : (
+          <>
+            {weather && <WeatherCard weather={weather} />}
+            {forecast && <ForecastList forecast={forecast} />} 
+          </>
+        )}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
+  container: { flex: 1, backgroundColor: '#f5f5f5', paddingTop: 10 },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  scrollContainer: { alignItems: 'center', padding: 20, paddingBottom: 50 },
+  
+  searchWrapper: {
+    flexDirection: 'row',
+    width: '100%',
+    marginBottom: 25,
     alignItems: 'center',
+  },
+  searchContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: 'white',
+    padding: 12,
+    borderRadius: 15,
+    alignItems: 'center',
+    marginRight: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    elevation: 2,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+  },
+  button: {
+    backgroundColor: '#007AFF',
+    padding: 12,
+    borderRadius: 12,
     justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  errorContainer: {
+    alignItems: 'center',
+    marginTop: 50,
+  },
+  errorText: {
+    color: '#333',
+    fontSize: 18,
+    marginTop: 10,
+    fontWeight: '500',
   },
 });

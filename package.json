@@ -9,10 +9,52 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "axios": "^1.13.2",
     "expo": "~54.0.25",
+    "expo-location": "~19.0.7",
     "expo-status-bar": "~3.0.8",
+    "lottie-react-native": "~7.3.1",
     "react": "19.1.0",
     "react-native": "0.81.5"
   },
-  "private": true
+  "private": true,
+  "expo": {
+    "name": "SmartWeather",
+    "slug": "SmartWeather",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourname.smartweather",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app needs your location to show local weather."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow SmartWeather to use your location."
+        }
+      ]
+    ]
+  }
 }
