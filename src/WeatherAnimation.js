@@ -7,24 +7,27 @@ export default function WeatherAnimation({ weatherMain }) {
 
   switch (weatherMain) {
     case 'Thunderstorm':
-      animationSource = require('../assets/animations/storm.json'); 
+      animationSource = require('../assets/animations/storm.json');
       break;
-      
+
     case 'Rain':
     case 'Drizzle':
-    case 'Clouds': 
+    case 'Snow':
+      animationSource = require('../assets/animations/Rainy.json');
+      break;
+
+    case 'Clouds':
     case 'Mist':
     case 'Smoke':
     case 'Haze':
     case 'Dust':
     case 'Fog':
-    case 'Snow':
-      animationSource = require('../assets/animations/Rainy.json'); 
+      animationSource = require('../assets/animations/Clouds.json');
       break;
 
     case 'Clear':
     default:
-      animationSource = require('../assets/animations/sunny.json'); 
+      animationSource = require('../assets/animations/sunny.json');
       break;
   }
 

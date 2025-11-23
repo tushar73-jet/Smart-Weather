@@ -3,10 +3,10 @@ import { StyleSheet, Text, View, ActivityIndicator, ScrollView, SafeAreaView, Te
 import * as Location from 'expo-location';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { MaterialIcons } from '@expo/vector-icons'; 
+import { MaterialIcons } from '@expo/vector-icons';
 
 import WeatherCard from './src/WeatherCard';
-import ForecastList from './src/ForecastList'; 
+import ForecastList from './src/ForecastList';
 
 const API_KEY = '3a307f3ced9dd6c1425c723508bdc58c'; 
 
@@ -18,22 +18,45 @@ export default function App() {
   const [citySearch, setCitySearch] = useState('');
 
   useEffect(() => {
-    loadCachedData(); 
-    getCurrentLocationWeather(); 
+    loadCachedData();
+    getCurrentLocationWeather();
   }, []);
+
+  const saveWeatherData = async (weatherData, forecastData) => {
+    await AsyncStorage.setItem('lastWeather', JSON.stringify(weatherData));
+    await AsyncStorage.setItem('lastForecast', JSON.stringify(forecastData));
+  };
+
+  const loadCachedDataFallback = async (offlineMessage) => {
+    try {
+      const savedWeather = await AsyncStorage.getItem('lastWeather');
+      const savedForecast = await AsyncStorage.getItem('lastForecast');
+
+      if (savedWeather && savedForecast) {
+        setWeather(JSON.parse(savedWeather));
+        setForecast(JSON.parse(savedForecast));
+        setErrorMsg(null);
+        Alert.alert("Offline Mode", offlineMessage);
+        return true;
+      }
+      return false;
+    } catch (storageErr) {
+      return false;
+    }
+  };
 
   const loadCachedData = async () => {
     try {
       const savedWeather = await AsyncStorage.getItem('lastWeather');
       const savedForecast = await AsyncStorage.getItem('lastForecast');
-      
+
       if (savedWeather && savedForecast) {
         setWeather(JSON.parse(savedWeather));
         setForecast(JSON.parse(savedForecast));
-        setLoading(false); 
+        setLoading(false);
       }
     } catch (e) {
-      console.log("Failed to load cache");
+      // Silent fail - let getCurrentLocationWeather handle loading state
     }
   };
 
@@ -55,19 +78,15 @@ export default function App() {
         axios.get(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`),
         axios.get(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`)
       ]);
-      
+
       setWeather(weatherRes.data);
       setForecast(forecastRes.data);
       setErrorMsg(null);
-
-      await AsyncStorage.setItem('lastWeather', JSON.stringify(weatherRes.data));
-      await AsyncStorage.setItem('lastForecast', JSON.stringify(forecastRes.data));
+      await saveWeatherData(weatherRes.data, forecastRes.data);
 
     } catch (err) {
-      const savedWeather = await AsyncStorage.getItem('lastWeather');
-      if (savedWeather) {
-        Alert.alert("Offline Mode", "Showing last updated data. Check internet connection.");
-      } else {
+      const hasCachedData = await loadCachedDataFallback("Showing last updated data. Check internet connection.");
+      if (!hasCachedData) {
         setErrorMsg('No Internet & No Saved Data.');
       }
     } finally {
@@ -84,7 +103,7 @@ export default function App() {
         `https://api.openweathermap.org/data/2.5/weather?q=${citySearch}&units=metric&appid=${API_KEY}`
       );
       const { lat, lon } = weatherRes.data.coord;
-      
+
       const forecastRes = await axios.get(
         `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`
       );
@@ -93,12 +112,13 @@ export default function App() {
       setForecast(forecastRes.data);
       setErrorMsg(null);
       setCitySearch('');
-      
-      await AsyncStorage.setItem('lastWeather', JSON.stringify(weatherRes.data));
-      await AsyncStorage.setItem('lastForecast', JSON.stringify(forecastRes.data));
+      await saveWeatherData(weatherRes.data, forecastRes.data);
 
     } catch (err) {
-      setErrorMsg('City not found or Network Error.');
+      const hasCachedData = await loadCachedDataFallback("City search failed. Showing last updated data. Check internet connection.");
+      if (!hasCachedData) {
+        setErrorMsg('City not found or Network Error. No cached data available.');
+      }
     } finally {
       setLoading(false);
     }
@@ -116,7 +136,6 @@ return (
   <SafeAreaView style={styles.root}>
     <View style={styles.phoneWrapper}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        
         <View style={styles.searchWrapper}>
           <View style={styles.searchContainer}>
             <MaterialIcons name="search" size={24} color="#666" style={{marginRight: 5}}/>
@@ -158,7 +177,7 @@ const styles = StyleSheet.create({
   },
 
   phoneWrapper: {
-    width: Platform.OS === "web" ? 430 : "100%", // Look like iPhone 14 Pro
+    width: Platform.OS === "web" ? 430 : "100%",
     maxWidth: 430,
     alignSelf: "center",
     backgroundColor: "#f5f5f5",
@@ -211,6 +230,12 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
 
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
   errorContainer: { alignItems: 'center', marginTop: 50 },
   errorText: { color: '#333', fontSize: 18, marginTop: 10, fontWeight: '500' },
 });
