@@ -2,7 +2,9 @@ import React from 'react';
 import { View, Text, StyleSheet, FlatList } from 'react-native';
 
 export default function ForecastList({ forecast }) {
-  const upcoming = forecast.list.slice(0, 5);
+  const upcoming = forecast?.list?.slice(0, 5) || [];
+
+
 
   const renderItem = ({ item }) => {
     const time = new Date(item.dt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });

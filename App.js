@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, ActivityIndicator, ScrollView, SafeAreaView, TextInput, TouchableOpacity, Keyboard, Alert, Platform } from 'react-native';
 import * as Location from 'expo-location';
 import axios from 'axios';
+axios.defaults.timeout = 5000
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialIcons } from '@expo/vector-icons';
 
@@ -18,9 +19,20 @@ export default function App() {
   const [citySearch, setCitySearch] = useState('');
 
   useEffect(() => {
-    loadCachedData();
-    getCurrentLocationWeather();
+    (async () => {
+      const savedWeather = await AsyncStorage.getItem('lastWeather');
+      const savedForecast = await AsyncStorage.getItem('lastForecast');
+  
+      if (savedWeather && savedForecast) {
+        setWeather(JSON.parse(savedWeather));
+        setForecast(JSON.parse(savedForecast));
+        setLoading(false);
+      }
+  
+      getCurrentLocationWeather();
+    })();
   }, []);
+  
 
   const saveWeatherData = async (weatherData, forecastData) => {
     await AsyncStorage.setItem('lastWeather', JSON.stringify(weatherData));
@@ -45,20 +57,6 @@ export default function App() {
     }
   };
 
-  const loadCachedData = async () => {
-    try {
-      const savedWeather = await AsyncStorage.getItem('lastWeather');
-      const savedForecast = await AsyncStorage.getItem('lastForecast');
-
-      if (savedWeather && savedForecast) {
-        setWeather(JSON.parse(savedWeather));
-        setForecast(JSON.parse(savedForecast));
-        setLoading(false);
-      }
-    } catch (e) {
-      // Silent fail - let getCurrentLocationWeather handle loading state
-    }
-  };
 
   const getCurrentLocationWeather = async () => {
     let { status } = await Location.requestForegroundPermissionsAsync();
